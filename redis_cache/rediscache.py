@@ -7,6 +7,7 @@ import json
 import hashlib
 import redis
 import logging
+from six import string_types
 
 DEFAULT_EXPIRY = 60 * 60 * 24
 
@@ -90,7 +91,7 @@ class SimpleCache(object):
                                            port=self.port,
                                            db=self.db,
                                            password=password).connect()
-        except RedisNoConnException, e:
+        except RedisNoConnException as e:
             self.connection = None
             pass
 
@@ -295,7 +296,7 @@ class SimpleCache(object):
 
     def get_hash(self, args):
         if self.hashkeys:
-            key = hashlib.md5(args).hexdigest()
+            key = hashlib.md5(args.encode('utf-8')).hexdigest()
         else:
             key = pickle.dumps(args)
         return key
@@ -379,7 +380,7 @@ def cache_it_json(limit=10000, expire=DEFAULT_EXPIRY, cache=None, namespace=None
 
 
 def to_unicode(obj, encoding='utf-8'):
-    if isinstance(obj, basestring):
-        if not isinstance(obj, unicode):
-            obj = unicode(obj, encoding)
+    if isinstance(obj, string_types):
+        if not isinstance(obj, str):
+            obj = str(obj, encoding)
     return obj
