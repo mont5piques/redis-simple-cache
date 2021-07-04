@@ -8,6 +8,7 @@ import hashlib
 import redis
 from redis._compat import unicode, basestring
 import logging
+import inspect
 
 DEFAULT_EXPIRY = 60 * 60 * 24
 
@@ -303,7 +304,7 @@ class SimpleCache(object):
 
     def get_hash(self, args):
         if self.hashkeys:
-            key = hashlib.md5(args).hexdigest()
+            key = hashlib.md5(args.encode('utf-8')).hexdigest()
         else:
             key = pickle.dumps(args)
         return key
@@ -342,8 +343,14 @@ def cache_it(limit=10000, expire=DEFAULT_EXPIRY, cache=None,
 
             ## Key will be either a md5 hash or just pickle object,
             ## in the form of `function name`:`key`
-            key = cache.get_hash(serializer.dumps([args, kwargs]))
-            cache_key = '{func_name}:{key}'.format(func_name=function.__name__,
+            ## We check first if the function is bound to a class
+            spec = inspect.getargspec(function)
+            if spec.args and spec.args[0] == 'self':
+                key = cache.get_hash(serializer.dumps([args[1:], kwargs]))
+            else:
+                key = cache.get_hash(serializer.dumps([args, kwargs]))
+
+            cache_key = '{func_name}:{key}'.format(func_name=function.__qualname__,
                                                    key=key)
 
             if namespace:
